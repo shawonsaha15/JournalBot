@@ -63,7 +63,7 @@ Sometimes it’s hard to process everything we experience in a day. This app hel
 
 * [Streamlit](https://streamlit.io/) – for interactive UI
 * [Google Generative AI (Gemini)](https://ai.google.dev/) – for blog generation
-* [Pillow (PIL)](https://python-pillow.org/) – for dynamic image rendering
+* [Pillow (PIL)](https://pypi.org/project/pillow/) – for dynamic image rendering
 * [Python](https://www.python.org/) – the glue behind it all
 
 ---
