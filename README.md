@@ -127,7 +127,3 @@ PRs and ideas are welcome! Fork the repo and make it your own ✨
 Whether you journal every day or just need a space to reflect occasionally, **JournalBot** helps you turn fleeting thoughts into meaningful reflections — one conversation at a time.
 
 **Try it out. Make journaling yours.**
-
----
-
-Would you like me to generate a badge-ready link to a **real Streamlit deployment** for this as well? Or shall I generate a `requirements.txt` for your current setup too?
