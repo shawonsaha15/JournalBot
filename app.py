@@ -26,22 +26,42 @@ if "output_choice" not in st.session_state:
 # Sidebar customization
 st.sidebar.header("Customize Blog Appearance")
 
+# Font selector
 font_options = {
     "Roboto": os.path.join("fonts", "Roboto-VariableFont_wdth,wght.ttf"),
-    # Add more fonts if needed
+    "Great-Vibes": os.path.join("fonts","GreatVibes-Regular.ttf")
+    # Add more fonts here like:
+    # "Lora": "fonts/Lora-Regular.ttf",
+    # "Indie Flower": "fonts/IndieFlower-Regular.ttf",
 }
-font_style = st.sidebar.selectbox("Font Style", list(font_options.keys()), index=0)
-font_size = st.sidebar.slider("Font Size", 12, 48, 20)
-font_color = st.sidebar.color_picker("Font Color", "#333333")
-bg_image_file = st.sidebar.file_uploader("Upload Background Image (optional)", type=["png", "jpg", "jpeg"])
+font_style = st.sidebar.selectbox("### Font Style", list(font_options.keys()), index=0)
+
+# --- Font preview ---
+st.sidebar.markdown("### Font Preview")
+
+try:
+    preview_font = ImageFont.truetype(font_options[font_style], 24)
+    preview_img = Image.new("RGB", (400, 60), "white")
+    draw = ImageDraw.Draw(preview_img)
+    draw.text((10, 10), f"This is {font_style}", font=preview_font, fill="black")
+
+    buf = BytesIO()
+    preview_img.save(buf, format="PNG")
+    st.sidebar.image(buf.getvalue(), use_container_width=True)
+except Exception as e:
+    st.sidebar.warning(f"Could not load preview for {font_style}.")
+
+font_size = st.sidebar.slider("### Font Size", 12, 48, 20)
+font_color = st.sidebar.color_picker("### Font Color", "#333333")
+bg_image_file = st.sidebar.file_uploader("### Upload Background Image (optional)", type=["png", "jpg", "jpeg"])
 
 if bg_image_file is not None:
     bg_image = Image.open(bg_image_file).convert("RGBA")
 else:
     bg_image = None
 
-st.title("📝 JournalBot")
-st.markdown("A reflective journaling chatbot powered by Gemini.")
+st.title("JournalBot")
+st.markdown("Where whispers become words and silence finds meaning")
 
 # Display chat messages
 for msg in st.session_state.messages:
