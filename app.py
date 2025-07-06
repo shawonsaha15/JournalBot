@@ -14,8 +14,11 @@ genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 model = genai.GenerativeModel("gemini-1.5-flash")
 if "chat" not in st.session_state:
     st.session_state.chat = model.start_chat(history=[])
+
+# Initialize conversation state
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = [{"role": "assistant", "content": "Hey! How was your day today?"}]
+
 if "blog_generated" not in st.session_state:
     st.session_state.blog_generated = False
 if "blog" not in st.session_state:
@@ -29,10 +32,7 @@ st.sidebar.header("Customize Blog Appearance")
 # Font selector
 font_options = {
     "Roboto": os.path.join("fonts", "Roboto-VariableFont_wdth,wght.ttf"),
-    "Great-Vibes": os.path.join("fonts","GreatVibes-Regular.ttf")
-    # Add more fonts here like:
-    # "Lora": "fonts/Lora-Regular.ttf",
-    # "Indie Flower": "fonts/IndieFlower-Regular.ttf",
+    "Great-Vibes": os.path.join("fonts", "GreatVibes-Regular.ttf")
 }
 font_style = st.sidebar.selectbox("### Font Style", list(font_options.keys()), index=0)
 
@@ -68,7 +68,7 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# User input
+# User input handling
 if prompt := st.chat_input("Tell me how your day went..."):
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -77,29 +77,36 @@ if prompt := st.chat_input("Tell me how your day went..."):
     if prompt.lower().strip() == "done":
         st.session_state.blog_generated = True
     else:
-        response = st.session_state.chat.send_message(prompt)
+        # Use conversation history to maintain context and ask a follow-up question or comment
+        conversation_history = "\n".join([f'{msg["role"]}: {msg["content"]}' for msg in st.session_state.messages])
+        
+        # Add a prompt to generate a balanced response: a friendly comment or a thoughtful question
+        follow_up_prompt = f"""
+Based on this conversation, provide a friendly, thoughtful response. It could be an empathetic comment, an interesting observation, or a follow-up question to keep the conversation going. 
+
+Conversation History:
+{conversation_history}
+"""
+        # Generate the response
+        response = st.session_state.chat.send_message(follow_up_prompt)
+
         with st.chat_message("assistant"):
             st.markdown(response.text)
         st.session_state.messages.append({"role": "assistant", "content": response.text})
 
+# Generate the blog text based on conversation history
 def clean_markdown(text):
-    # Remove markdown headers like ##, ###, etc.
     text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
-
-    # Remove bold/italic markers
-    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)  # bold **
-    text = re.sub(r"\*(.*?)\*", r"\1", text)      # italic *
-    text = re.sub(r"__(.*?)__", r"\1", text)      # bold __
-    text = re.sub(r"_(.*?)_", r"\1", text)        # italic _
-    text = re.sub(r"`(.*?)`", r"\1", text)        # inline code
-    text = re.sub(r"\n{3,}", "\n\n", text)        # normalize extra line breaks
-
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"\*(.*?)\*", r"\1", text)
+    text = re.sub(r"__(.*?)__", r"\1", text)
+    text = re.sub(r"_(.*?)_", r"\1", text)
+    text = re.sub(r"`(.*?)`", r"\1", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
 
 def generate_blog_text():
-    formatted = "\n".join(
-        [f'{msg["role"].capitalize()}: {msg["content"]}' for msg in st.session_state.messages]
-    )
+    formatted = "\n".join([f'{msg["role"].capitalize()}: {msg["content"]}' for msg in st.session_state.messages])
     summary_prompt = f"""
 Based on this conversation, write a first-person reflective blog post about the user's day. Make it expressive and readable:
 
@@ -111,6 +118,7 @@ Conversation:
     blog = f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n{blog}"
     return blog
 
+# Generate the blog image
 def create_blog_image(text, font_path, font_size, font_color, bg_image=None, max_width=800, padding=40):
     try:
         font = ImageFont.truetype(font_path, font_size)
@@ -119,7 +127,6 @@ def create_blog_image(text, font_path, font_size, font_color, bg_image=None, max
 
     paragraphs = text.split("\n\n")
     wrapper = textwrap.TextWrapper(width=70)
-
     bbox = font.getbbox("A")
     line_height = (bbox[3] - bbox[1]) + 10
     paragraph_spacing = 10
@@ -146,36 +153,18 @@ def create_blog_image(text, font_path, font_size, font_color, bg_image=None, max
 
     return img
 
-# After "done" prompt, ask user what output to generate
-if st.session_state.blog_generated and st.session_state.output_choice is None:
-    st.info("You typed 'done'. What do you want to generate?")
-    choice = st.radio(
-        "Select output:",
-        ("Text only", "Image only", "Both"),
-        index=0,
-    )
-    if st.button("Generate"):
-        st.session_state.output_choice = choice
-        st.session_state.blog = generate_blog_text()
+# Allow user to edit the generated blog text
+if st.session_state.blog_generated:
+    st.subheader("Edit Your Generated Blog Post")
 
-# Show results based on user choice
-if st.session_state.output_choice and st.session_state.blog:
-    font_path = font_options.get(font_style, list(font_options.values())[0])
+    # Display the blog in a text box for editing
+    editable_blog = st.text_area("Edit Your Blog Post", st.session_state.blog, height=300)
 
-    if st.session_state.output_choice in ("Text only", "Both"):
-        st.subheader("📖 Your Blog Post")
-        st.markdown(f"```plaintext\n{st.session_state.blog}\n```")
-        filename_txt = f"journal_blog_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        st.sidebar.download_button(
-            label="📥 Download Blog Text",
-            data=st.session_state.blog,
-            file_name=filename_txt,
-            mime="text/plain",
-        )
-
-    if st.session_state.output_choice in ("Image only", "Both"):
+    if st.button("Generate Image"):
+        # Generate image based on the modified blog text
+        font_path = font_options.get(font_style, list(font_options.values())[0])
         blog_img = create_blog_image(
-            text=st.session_state.blog,
+            text=editable_blog,
             font_path=font_path,
             font_size=font_size,
             font_color=font_color,
@@ -183,6 +172,7 @@ if st.session_state.output_choice and st.session_state.blog:
         )
         st.image(blog_img)
 
+        # Allow user to download the generated image
         buf = BytesIO()
         blog_img.save(buf, format="PNG")
         byte_im = buf.getvalue()
