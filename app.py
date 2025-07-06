@@ -68,32 +68,6 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# User input handling
-if prompt := st.chat_input("Tell me how your day went... Type 'done' once you are done."):
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
-    if prompt.lower().strip() == "done":
-        st.session_state.blog_generated = True
-    else:
-        # Use conversation history to maintain context and ask a follow-up question or comment
-        conversation_history = "\n".join([f'{msg["role"]}: {msg["content"]}' for msg in st.session_state.messages])
-        
-        # Add a prompt to generate a balanced response: a friendly comment or a thoughtful question
-        follow_up_prompt = f"""
-Based on this conversation, provide a friendly, thoughtful response. It could be an empathetic comment, an interesting observation, or a follow-up question to keep the conversation going. 
-
-Conversation History:
-{conversation_history}
-"""
-        # Generate the response
-        response = st.session_state.chat.send_message(follow_up_prompt)
-
-        with st.chat_message("assistant"):
-            st.markdown(response.text)
-        st.session_state.messages.append({"role": "assistant", "content": response.text})
-
 # Generate the blog text based on conversation history
 def clean_markdown(text):
     text = re.sub(r"^#{1,6}\s*", "", text, flags=re.MULTILINE)
@@ -117,6 +91,34 @@ Conversation:
     blog = clean_markdown(blog)  # <- clean it here
     blog = f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n{blog}"
     return blog
+
+# User input handling
+if prompt := st.chat_input("Tell me how your day went... Type 'done' once you are done."):
+    with st.chat_message("user"):
+        st.markdown(prompt)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    if prompt.lower().strip() == "done":
+        st.session_state.blog_generated = True
+        st.session_state.blog = generate_blog_text()
+    else:
+        # Use conversation history to maintain context and ask a follow-up question or comment
+        conversation_history = "\n".join([f'{msg["role"]}: {msg["content"]}' for msg in st.session_state.messages])
+        
+        # Add a prompt to generate a balanced response: a friendly comment or a thoughtful question
+        follow_up_prompt = f"""
+Based on this conversation, provide a friendly, thoughtful response. It could be an empathetic comment, an interesting observation, or a follow-up question to keep the conversation going. 
+
+Conversation History:
+{conversation_history}
+"""
+        # Generate the response
+        response = st.session_state.chat.send_message(follow_up_prompt)
+
+        with st.chat_message("assistant"):
+            st.markdown(response.text)
+        st.session_state.messages.append({"role": "assistant", "content": response.text})
+
 
 # Generate the blog image
 def create_blog_image(text, font_path, font_size, font_color, bg_image=None, max_width=800, padding=40):
