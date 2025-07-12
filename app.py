@@ -14,6 +14,12 @@ genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 model = genai.GenerativeModel("gemini-1.5-flash")
 if "chat" not in st.session_state:
     st.session_state.chat = model.start_chat(history=[])
+    
+def count_total_tokens(messages):
+    conversation_text = "\n".join([f'{msg["role"]}: {msg["content"]}' for msg in messages])
+    token_info = model.count_tokens(conversation_text)
+    return token_info.total_tokens
+
 
 # Initialize conversation state
 if "messages" not in st.session_state:
@@ -101,6 +107,10 @@ if prompt := st.chat_input("Tell me how your day went... Type 'done' once you ar
     if prompt.lower().strip() == "done":
         st.session_state.blog_generated = True
         st.session_state.blog = generate_blog_text()
+        
+        # Calculate token count only after session ends
+        token_count = count_total_tokens(st.session_state.messages)
+        st.session_state["token_count"] = token_count
     else:
         # Use conversation history to maintain context and ask a follow-up question or comment
         conversation_history = "\n".join([f'{msg["role"]}: {msg["content"]}' for msg in st.session_state.messages])
@@ -179,9 +189,17 @@ if st.session_state.blog_generated:
         blog_img.save(buf, format="PNG")
         byte_im = buf.getvalue()
 
-        st.sidebar.download_button(
+        st.download_button(
             label="📥 Download Blog Image",
             data=byte_im,
             file_name=f"journal_blog_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png",
             mime="image/png",
         )
+        
+    if st.button("🔁 Start Over Session"):
+        for key in ["chat", "messages", "blog_generated", "blog", "output_choice", "token_count"]:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.rerun()
+
+    st.markdown(f"### 📊 Total Token Count: `{st.session_state.token_count}`")
