@@ -11,7 +11,7 @@ import re
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 # Initialize Gemini model
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-2.5-flash")
 if "chat" not in st.session_state:
     st.session_state.chat = model.start_chat(history=[])
     
@@ -203,3 +203,4 @@ if st.session_state.blog_generated:
         st.rerun()
 
     st.markdown(f"### 📊 Total Token Count: `{st.session_state.token_count}`")
+
