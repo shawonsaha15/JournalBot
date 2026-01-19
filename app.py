@@ -8,7 +8,8 @@ import os
 import re
 
 # Configure Gemini API key
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+genai.configure(api_key=GEMINI_API_KEY)
 
 # Initialize Gemini model
 model = genai.GenerativeModel("gemini-2.5-flash")
@@ -203,4 +204,5 @@ if st.session_state.blog_generated:
         st.rerun()
 
     st.markdown(f"### 📊 Total Token Count: `{st.session_state.token_count}`")
+
 
